@@ -24,7 +24,7 @@ public class UserDao {
         //커넥션맺기
 
 
-        Connection connection = DriverManager.getConnection("jdbc:mysql://117.17.102.106","root","1234");
+        Connection connection = DriverManager.getConnection("jdbc:mysql://117.17.102.106/user","root","1234");
 
             //쿼리만들기
         PreparedStatement preparedStatement = connection.prepareStatement("select * from user where id = ?");
@@ -56,4 +56,40 @@ public class UserDao {
     }
 
 
+    public Long add(User user) throws ClassNotFoundException, SQLException {
+        Class.forName("com.mysql.jdbc.Driver");
+
+        Connection connection = DriverManager.getConnection("jdbc:mysql://117.17.102.106/user?character=utf-8","root","1234");
+
+
+
+        PreparedStatement preparedStatement = connection.prepareStatement("insert into user(name, password) VALUE (?,?)");
+
+        preparedStatement.setString(1, user.getName());
+
+        preparedStatement.setString(2, user.getPassword());
+
+        preparedStatement.executeUpdate();
+
+
+
+
+        preparedStatement = connection.prepareStatement("select last_insert_id()");
+
+        ResultSet resultSet = preparedStatement.executeQuery();
+
+        resultSet.next();
+
+        Long id = resultSet.getLong(1);
+
+
+        resultSet.close();
+
+        preparedStatement.close();
+
+        connection.close();
+
+
+        return id;
+    }
 }
