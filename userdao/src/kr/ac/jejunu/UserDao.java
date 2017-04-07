@@ -1,10 +1,9 @@
 package kr.ac.jejunu;
 
-import javax.xml.transform.Result;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 
 /**
@@ -16,37 +15,83 @@ import java.sql.*;
 public class UserDao {
 
     //변하는 것
-    private ConnectionMaker connectionMaker;
 
-    public UserDao(ConnectionMaker connectionMaker){
+    //user Dao에 new를 해버리면 다른 한라대가 하면 불가능함
+    //던져버림 나머지를
+    // private ConnectionMaker connectionMaker = new JejuConnectionMaker;
+
+
+    public void setConnectionMaker(ConnectionMaker connectionMaker) {
         this.connectionMaker = connectionMaker;
     }
 
+    private ConnectionMaker connectionMaker;
+
+    // 클라이언드에게 던짐
+
+
     public User get(Long id) throws ClassNotFoundException, SQLException {
 
-
-        Connection connection = connectionMaker.getConnection();
-
-        //쿼리만들기
-        PreparedStatement preparedStatement = connection.prepareStatement("select * from user where id = ?");
-        preparedStatement.setLong(1, id);
-
-        //쿼리실행
-        ResultSet resultSet = preparedStatement.executeQuery();
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        User user = null;
 
 
-        //생성된결과를 객체 매핑
-        resultSet.next();
+        try {
+            //connectionMaker가 있어 애가 가져올 수 있도록
+            connection = connectionMaker.getConnection();
+            StatementStrategy statementStrategy = new GetUserStatementStrategy();
+            preparedStatement = statementStrategy.makeStatement(id, connection);
 
-        User user = new User();
-        user.setId(resultSet.getLong("id"));
-        user.setName(resultSet.getString("name"));
-        user.setPassword(resultSet.getString("password"));
+        /*    //쿼리만들기
+            preparedStatement = connection.prepareStatement("select * from user where id = ?");
+            preparedStatement.setLong(1, id);
+*/
+            //쿼리실행
+            resultSet = preparedStatement.executeQuery();
 
-        //자원해지
-        resultSet.close();
-        preparedStatement.close();
-        connection.close();
+
+            //생성된결과를 객체 매핑
+
+            if (resultSet.next()) {
+                user = new User();
+                user.setId(resultSet.getLong("id"));
+                user.setName(resultSet.getString("name"));
+                user.setPassword(resultSet.getString("password"));
+            }
+
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+
+            if (resultSet != null) {
+                try {
+                    resultSet.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
 
         //결과를 리턴
         return user;
@@ -55,32 +100,171 @@ public class UserDao {
 
     public Long add(User user) throws ClassNotFoundException, SQLException {
 
-        Connection connection = connectionMaker.getConnection();
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Long id = null;
+        try {
+            connection = connectionMaker.getConnection();
+            StatementStrategy statementStrategy = new AddUserStatementStrategy();
+            preparedStatement = statementStrategy.makeStatement(user, connection);
+/*
+            preparedStatement = connection.prepareStatement("insert into user(name, password) VALUE (?,?)");
+            //1번째 칸에는 이름 2번째칸에는 비밀번호
+            preparedStatement.setString(1, user.getName());
+            preparedStatement.setString(2, user.getPassword());*/
 
-        PreparedStatement preparedStatement = connection.prepareStatement("insert into user(name, password) VALUE (?,?)");
-        preparedStatement.setString(1, user.getName());
-        preparedStatement.setString(2, user.getPassword());
-        preparedStatement.executeUpdate();
+            preparedStatement.executeUpdate();
 
-        preparedStatement = connection.prepareStatement("select last_insert_id()");
-        ResultSet resultSet = preparedStatement.executeQuery();
-        resultSet.next();
-        Long id = resultSet.getLong(1);
+            preparedStatement = connection.prepareStatement("select last_insert_id()");
+            resultSet = preparedStatement.executeQuery();
+            resultSet.next();
 
-        resultSet.close();
-        preparedStatement.close();
-        connection.close();
+            //Long id = getLastInsertId(connection);
 
+            id = resultSet.getLong(1);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
 
+            if (resultSet != null) {
+                try {
+                    resultSet.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        //아이디를 리턴한다
         return id;
     }
+
+    public void updata(User user) {
+
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+
+
+        try {
+            connection = connectionMaker.getConnection();
+
+            StatementStrategy statementStrategy = new UpdateUserStatementStrategy();
+            preparedStatement = statementStrategy.makeStatement(user, connection);
+
+          /*  preparedStatement = connection.prepareStatement("update user set name = ?, password =? where id =?");
+            //1번째 칸에는 이름 2번째칸에는 비밀번호
+            preparedStatement.setString(1, user.getName());
+            preparedStatement.setString(2, user.getPassword());
+            preparedStatement.setLong(3, user.getId());*/
+
+            preparedStatement.executeUpdate();
+
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+    }
+
+    public void delete(Long id) {
+        PreparedStatement preparedStatement = null;
+        Connection connection = null;
+
+        try {
+            connection = connectionMaker.getConnection();
+
+            StatementStrategy statementStrategy = new DeleteUserStatementStrategy();
+            preparedStatement = statementStrategy.makeStatement(id, connection);
+            preparedStatement.executeUpdate();
+
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+
+
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+      /*  PreparedStatement preparedStatement;
+        preparedStatement = connection.prepareStatement("delete from user where id = ?");
+        preparedStatement.setLong(1, id);
+        return preparedStatement;*/
+
+
+}
+
+//잘 모르는 부분 어떻게 바뀔지 모르는 뿐
+//public abstract Connection getConnection()
 
  /*   private Connection getConnection() throws ClassNotFoundException, SQLException {
 
         Class.forName("com.mysql.jdbc.Driver");
 
+        //characterEncoding=utf-8
+
         Connection connection = DriverManager.getConnection("jdbc:mysql://117.17.102.106/user?character=utf-8","root","1234");
     }*/
 
 
-}
+

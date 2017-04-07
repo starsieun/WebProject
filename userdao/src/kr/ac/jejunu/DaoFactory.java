@@ -10,10 +10,15 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class DaoFactory {
 
+    //자기자신을 new 해주는 녀석
     @Bean
     public UserDao userDao(){
 
-        return new UserDao(connectionMaker());
+        UserDao userDao = new UserDao();
+        userDao.setConnectionMaker(connectionMaker());
+
+        return userDao;
+
     }
 
     @Bean
