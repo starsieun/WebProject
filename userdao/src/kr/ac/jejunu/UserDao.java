@@ -1,5 +1,11 @@
 package kr.ac.jejunu;
 
+import com.mysql.jdbc.Statement;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,245 +20,86 @@ import java.sql.SQLException;
 
 public class UserDao {
 
+
+    public void setJdbcTemplate(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    private JdbcTemplate jdbcTemplate;
+
     //변하는 것
 
     //user Dao에 new를 해버리면 다른 한라대가 하면 불가능함
     //던져버림 나머지를
-    // private ConnectionMaker connectionMaker = new JejuConnectionMaker;
+    // private DataSource dataSource = new JejuConnectionMaker;
 
-
-    public void setConnectionMaker(ConnectionMaker connectionMaker) {
-        this.connectionMaker = connectionMaker;
-    }
-
-    private ConnectionMaker connectionMaker;
 
     // 클라이언드에게 던짐
 
 
     public User get(Long id) throws ClassNotFoundException, SQLException {
 
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        User user = null;
-
-
-        try {
-            //connectionMaker가 있어 애가 가져올 수 있도록
-            connection = connectionMaker.getConnection();
-            StatementStrategy statementStrategy = new GetUserStatementStrategy();
-            preparedStatement = statementStrategy.makeStatement(id, connection);
-
-        /*    //쿼리만들기
-            preparedStatement = connection.prepareStatement("select * from user where id = ?");
-            preparedStatement.setLong(1, id);
-*/
-            //쿼리실행
-            resultSet = preparedStatement.executeQuery();
-
-
-            //생성된결과를 객체 매핑
-
-            if (resultSet.next()) {
-                user = new User();
+        String sql = "select * from user where id = ?";
+        Object[] params = new Object[]{id};
+        User user1 = null;
+        try{
+            user1 = jdbcTemplate.queryForObject(sql,params,(resultSet, i)->{
+                User user = new User();
                 user.setId(resultSet.getLong("id"));
                 user.setName(resultSet.getString("name"));
+
                 user.setPassword(resultSet.getString("password"));
-            }
 
-        } catch (ClassNotFoundException e) {
+                return user;
+            });
+
+        } catch ( DataAccessException e){
             e.printStackTrace();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-
-            if (resultSet != null) {
-                try {
-                    resultSet.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
         }
 
-        //결과를 리턴
-        return user;
+        return user1;
     }
 
 
     public Long add(User user) throws ClassNotFoundException, SQLException {
 
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        Long id = null;
-        try {
-            connection = connectionMaker.getConnection();
-            StatementStrategy statementStrategy = new AddUserStatementStrategy();
-            preparedStatement = statementStrategy.makeStatement(user, connection);
-/*
-            preparedStatement = connection.prepareStatement("insert into user(name, password) VALUE (?,?)");
-            //1번째 칸에는 이름 2번째칸에는 비밀번호
-            preparedStatement.setString(1, user.getName());
-            preparedStatement.setString(2, user.getPassword());*/
+        String sql = "insert into user(name, password) VALUE (?,?)";
 
-            preparedStatement.executeUpdate();
+        KeyHolder keyHolder = new GeneratedKeyHolder();
 
-            preparedStatement = connection.prepareStatement("select last_insert_id()");
-            resultSet = preparedStatement.executeQuery();
-            resultSet.next();
+        jdbcTemplate.update(conneciton ->{
+            PreparedStatement preparedStatement = conneciton.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            preparedStatement.setString(1,user.getName());
+            preparedStatement.setString(2,user.getPassword());
+            return preparedStatement;
+        },keyHolder);
 
-            //Long id = getLastInsertId(connection);
-
-            id = resultSet.getLong(1);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-
-            if (resultSet != null) {
-                try {
-                    resultSet.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        //아이디를 리턴한다
-        return id;
+        return (Long) keyHolder.getKey();
     }
+
 
     public void updata(User user) {
 
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-
-
-        try {
-            connection = connectionMaker.getConnection();
-
-            StatementStrategy statementStrategy = new UpdateUserStatementStrategy();
-            preparedStatement = statementStrategy.makeStatement(user, connection);
-
-          /*  preparedStatement = connection.prepareStatement("update user set name = ?, password =? where id =?");
-            //1번째 칸에는 이름 2번째칸에는 비밀번호
-            preparedStatement.setString(1, user.getName());
-            preparedStatement.setString(2, user.getPassword());
-            preparedStatement.setLong(3, user.getId());*/
-
-            preparedStatement.executeUpdate();
-
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+        String sql = "update user set name = ?, password =? where id =?";
+        Object[] params = new Object[]{user.getName(), user.getPassword(), user.getId()};
+        jdbcTemplate.update(sql, params);
 
     }
 
     public void delete(Long id) {
-        PreparedStatement preparedStatement = null;
-        Connection connection = null;
 
-        try {
-            connection = connectionMaker.getConnection();
+        Object[] params = new Object[]{id};
+        String sql = "delete from user where id = ?";
 
-            StatementStrategy statementStrategy = new DeleteUserStatementStrategy();
-            preparedStatement = statementStrategy.makeStatement(id, connection);
-            preparedStatement.executeUpdate();
-
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-
-
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+        jdbcTemplate.update(sql, params);
     }
 
-
-
-
-
-
-
-
-      /*  PreparedStatement preparedStatement;
-        preparedStatement = connection.prepareStatement("delete from user where id = ?");
-        preparedStatement.setLong(1, id);
-        return preparedStatement;*/
-
-
 }
+
+
+
+
+
 
 //잘 모르는 부분 어떻게 바뀔지 모르는 뿐
 //public abstract Connection getConnection()

@@ -8,6 +8,7 @@
       <root url="jar://$PROJECT_DIR$/lib/spring-core-4.3.7.RELEASE.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/spring-expression-4.3.7.RELEASE.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/spring-jdbc-4.3.7.RELEASE.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/spring-tx-4.3.7.RELEASE.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

@@ -2,6 +2,10 @@ package kr.ac.jejunu;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.SimpleDriverDataSource;
+
+import javax.sql.DataSource;
 
 /**
  * Created by sieun on 2017. 3. 24..
@@ -15,15 +19,23 @@ public class DaoFactory {
     public UserDao userDao(){
 
         UserDao userDao = new UserDao();
-        userDao.setConnectionMaker(connectionMaker());
+        userDao.setJdbcTemplate(jdbcTemplate());
 
         return userDao;
 
     }
+    @Bean
+    public JdbcTemplate jdbcTemplate(){
+
+        JdbcTemplate jdbcTemplate = new JdbcTemplate();
+        jdbcTemplate.setDataSource(dataSource());
+
+        return jdbcTemplate();
+
+    }
 
     @Bean
-    public JejuConnectionMaker connectionMaker() {
-
-        return new JejuConnectionMaker();
+    public DataSource dataSource() {
+        return new SimpleDriverDataSource();
     }
 }
